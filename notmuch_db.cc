@@ -1,7 +1,9 @@
 
+#include <cassert>
 #include <iostream>
 #include <sstream>
 #include <stdexcept>
+#include <fcntl.h>
 #include <signal.h>
 #include <stdarg.h>
 #include <string.h>
@@ -105,10 +107,10 @@ notmuch_db::default_notmuch_config()
 }
 
 string
-notmuch_db::get_config(const char *config)
+notmuch_db::get_config(const char *config, int *err)
 {
   const char *av[] { "notmuch", "config", "get", config, nullptr };
-  return run_notmuch(av);
+  return run_notmuch(av, nullptr, err);
 }
 
 void
@@ -129,6 +131,7 @@ notmuch_db::notmuch_db(string config, bool create)
   : notmuch_config (config),
     maildir (chomp(get_config("database.path"))),
     new_tags (lines(get_config("new.tags"))),
+    and_tags (make_and_tags()),
     sync_flags (conf_to_bool(get_config("maildir.synchronize_flags")))
 {
   if (maildir.empty())
@@ -152,8 +155,17 @@ notmuch_db::~notmuch_db()
   close();
 }
 
+notmuch_db::tags_t
+notmuch_db::make_and_tags()
+{
+  int err;
+  string s = get_config("muchsync.and_tags", &err);
+  return err ? new_tags : lines(s);
+}
+
 string
-notmuch_db::run_notmuch(const char *const *av, const char *errprefix)
+notmuch_db::run_notmuch(const char *const *av, const char *errprefix,
+			int *exit_value)
 {
   int fds[2];
   if (pipe(fds) != 0)
@@ -177,8 +189,23 @@ notmuch_db::run_notmuch(const char *const *av, const char *errprefix)
 	::close(fds[1]);
     }
     setenv("NOTMUCH_CONFIG", notmuch_config.c_str(), 1);
+
+    int err = -1;
+    if (exit_value) {
+      // Since the caller is looking at exit value, suppress chatter
+      err = dup(2);
+      ::close(2);
+      fcntl(err, F_SETFD, 1);
+      ::open("/dev/null", O_WRONLY);
+    }
+    
     execvp("notmuch", const_cast<char *const*> (av));
+
+    if (err != -1)
+      dup2(err, 2);
+
     cerr << "notmuch: " << strerror(errno) << endl;
+    // Use SIGINT as hacky way to convey that exec failed
     raise(SIGINT);
     _exit(127);
   }
@@ -196,9 +223,21 @@ notmuch_db::run_notmuch(const char *const *av, const char *errprefix)
     os << in.rdbuf();
 
   int status;
-  if (waitpid(pid, &status, 0) == pid
-      && WIFSIGNALED(pid) && WTERMSIG(status) == SIGINT)
-    throw runtime_error ("could not run notmuch");
+  if (waitpid(pid, &status, 0) != pid)
+    assert(!"waitpid failed waiting for notmuch");
+  else if (!WIFEXITED(status)) {
+    if (WIFSIGNALED(status)) {
+      if (WTERMSIG(status) == SIGINT)
+	throw runtime_error ("could not run notmuch");
+      else
+	throw runtime_error ("notmuch exited with signal "
+			     + std::to_string(WTERMSIG(status)));
+    }
+    else
+      throw runtime_error ("notmuch exit status " + status);
+  }
+  if (exit_value)
+    *exit_value = WEXITSTATUS(status);
   return os.str();
 }
 

@@ -28,7 +28,9 @@ class notmuch_db {
       throw notmuch_err (op, stat);
   }
 
-  string run_notmuch(const char *const *av, const char *errprefix = nullptr);
+  string run_notmuch(const char *const *av,
+		     const char *errprefix = nullptr,
+		     int *exit_value = nullptr);
 public:
   using tags_t = std::unordered_set<string>;
   using message_t = unique_obj<notmuch_message_t, notmuch_message_destroy>;
@@ -36,6 +38,7 @@ public:
   const string notmuch_config;
   const string maildir;
   const tags_t new_tags;
+  const tags_t and_tags;
   const bool sync_flags;
 
   static string default_notmuch_config();
@@ -51,6 +54,9 @@ public:
     return reinterpret_cast<const fake_message *>(msg)->doc_id;
   }
 
+private:
+  tags_t make_and_tags();
+public:
   notmuch_db(string config, bool create = false);
   notmuch_db(const notmuch_db &) = delete;
   ~notmuch_db();
@@ -70,7 +76,7 @@ public:
   Xapian::docid get_dir_docid(const char *path);
 
   notmuch_database_t *notmuch();
-  string get_config(const char *);
+  string get_config(const char *, int *err = nullptr);
   void set_config(const char *, ...);
   void close();
   void run_new(const char *prefix = "[notmuch] ");

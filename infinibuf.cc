@@ -78,7 +78,7 @@ infinibuf::output(int fd)
     else {
       if (errno == EAGAIN)
 	return true;
-      err(error = errno);
+      err(errno);
     }
   }
 }

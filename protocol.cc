@@ -412,11 +412,6 @@ msg_sync::hash_sync(const versvector &rvv,
 	  // worst and we crash at the wrong time, the next scan will
 	  // end up bumping the version number on this message ID.
 	  add_tag_.reset().param(docid, "").step();
-#if 0
-	  add_tag_.reset().bind_int(1, docid);
-	  for (auto t : nm_.new_tags)
-	    add_tag_.reset().bind_text(2, t).step();
-#endif
 	}
       }
     }
@@ -497,8 +492,8 @@ msg_sync::tag_sync(const versvector &rvv, const tag_info &rti)
     // Logically OR most tags
     for (auto i : lti.tags)
       newtags.insert(i);
-    // But logically AND new_tags
-    for (auto i : nm_.new_tags)
+    // But logically AND and_tags
+    for (auto i : nm_.and_tags)
       if (rti.tags.find(i) == rti.tags.end()
 	  || lti.tags.find(i) == lti.tags.end())
 	newtags.erase(i);
