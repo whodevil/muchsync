@@ -19,6 +19,7 @@ AC_LANG(C++)
 AX_APPEND_COMPILE_FLAGS([-pthread])
 
 AC_CHECK_FUNCS(openat)
+AC_CHECK_FUNCS(fdopendir)
 
 PKG_CHECK_MODULES([sqlite3], [sqlite3])
 PKG_CHECK_MODULES([libcrypto], [libcrypto])

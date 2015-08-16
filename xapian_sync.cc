@@ -63,21 +63,40 @@ CREATE TEMP TRIGGER link_insert AFTER INSERT ON xapian_files
 )");
 }
 
+// Non-thread-safe unility to work around missing openat & friends.
+template<typename R> R
+with_cwd(int dfd, R errval, function<R()> work)
+{
+  int dot = open(".", O_RDONLY);
+  if (dot < 0 || fchdir(dfd) < 0)
+    return errval;
+  cleanup _c ([dot]() { fchdir(dot); close(dot); });
+  return work();
+}
+
 #if !HAVE_OPENAT
-// A non-thread-safe workaround for missing openat.
 #define openat fake_openat
 static int
 openat(int dfd, const char *entry, int mode)
 {
-  int dot = open(".", O_RDONLY);
-  if (dot < 0)
-    return -1;
-  cleanup _c ([dot]() { fchdir(dot); close(dot); });
-  if (fchdir(dfd) < 0)
-    return -1;
-  return open(entry, mode);
+  return with_cwd<int>(dfd, -1, [=]() { return open(entry, mode); });
+}
+#define fstatat fake_fstatat
+static int
+fstatat(int dfd, const char *entry, struct stat *buf, int flag)
+{
+  return with_cwd<int>(dfd, -1, [=]() { return stat(entry, buf); });
 }
 #endif // !HAVE_OPENAT
+
+#if !HAVE_FDOPENDIR
+#define fdopendir fake_fdopendir
+static DIR *
+fdopendir(int dfd)
+{
+  return with_cwd<DIR *>(dfd, nullptr, []() { return opendir("."); });
+}
+#endif // !HAVE_FDOPENDIR
 
 static string
 get_sha (int dfd, const char *direntry, i64 *sizep)
