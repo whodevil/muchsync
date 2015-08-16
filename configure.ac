@@ -18,6 +18,8 @@ AC_LANG(C++)
 # -pthread Seems to be required by g++ -stc=c++11
 AX_APPEND_COMPILE_FLAGS([-pthread])
 
+AC_CHECK_FUNCS(openat)
+
 PKG_CHECK_MODULES([sqlite3], [sqlite3])
 PKG_CHECK_MODULES([libcrypto], [libcrypto])
 

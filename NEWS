@@ -1,5 +1,8 @@
 * Changes in release 2
 
+Work around missing openat because of reports it is missing on some
+versions of Mac OS X.
+
 New configuration option muchsync.and_tags (from Brian Sniffen).
 
 * Changes in release 1

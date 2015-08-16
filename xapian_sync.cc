@@ -63,6 +63,22 @@ CREATE TEMP TRIGGER link_insert AFTER INSERT ON xapian_files
 )");
 }
 
+#if !HAVE_OPENAT
+// A non-thread-safe workaround for missing openat.
+#define openat fake_openat
+static int
+openat(int dfd, const char *entry, int mode)
+{
+  int dot = open(".", O_RDONLY);
+  if (dot < 0)
+    return -1;
+  cleanup _c ([dot]() { fchdir(dot); close(dot); });
+  if (fchdir(dfd) < 0)
+    return -1;
+  return open(entry, mode);
+}
+#endif // !HAVE_OPENAT
+
 static string
 get_sha (int dfd, const char *direntry, i64 *sizep)
 {
