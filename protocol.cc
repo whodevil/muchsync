@@ -834,6 +834,22 @@ muchsync_server(sqlite3 *db, notmuch_db &nm)
       cout << "200 ok\n";
       remotevv_valid = false;
     }
+    else if (cmd == "help") {
+      cout << R"(200-commit
+200-conffile
+200-help
+200-linfo HASH
+200-link LINK-INFO
+200-lsync
+200-quit
+200-send HASH
+200-recv HASH-INFO LINK-INFO <newline> CONTENTS
+200-tags TAG-INFO
+200-tinfo MESSAGE-ID
+200-tsync
+200 vect VERSION-VECTOR
+)";
+    }
     else
       cout << "500 unknown verb " << cmd << '\n';
   }

@@ -1,3 +1,7 @@
+* Changes in release 3
+
+Added help command to --server mode.
+
 * Changes in release 2
 
 Work around missing openat because of reports it is missing on some
