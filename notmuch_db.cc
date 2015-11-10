@@ -234,7 +234,7 @@ notmuch_db::run_notmuch(const char *const *av, const char *errprefix,
 			     + std::to_string(WTERMSIG(status)));
     }
     else
-      throw runtime_error ("notmuch exit status " + status);
+      throw runtime_error ("notmuch exit status " + std::to_string(status));
   }
   if (exit_value)
     *exit_value = WEXITSTATUS(status);
