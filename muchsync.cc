@@ -40,6 +40,8 @@ bool opt_server;
 bool opt_upbg;
 bool opt_noup;
 bool opt_nonew;
+bool opt_newid;
+i64 opt_newid_value;
 int opt_verbose;
 int opt_upbg_fd = -1;
 string opt_ssh = "ssh -CTaxq";
@@ -124,13 +126,14 @@ Additional options:\n\
    --noup[load]  Do not upload changes to server\n\
    --upbg        Download mail in forground, then upload in background\n\
    --self        Print local replica identifier and exit\n\
+   --newid       Change local replica identifier and exit\n\
    --version     Print version number and exit\n\
    --help        Print usage\n";
   exit (code);
 }
 
 static void
-print_self()
+id_request()
 {
   unique_ptr<notmuch_db> nmp;
   try {
@@ -140,11 +143,21 @@ print_self()
 
   string dbpath = nm.maildir + muchsync_dbpath;
 
-  sqlite3 *db = dbopen(dbpath.c_str(), false);
+  sqlite3 *db = dbopen(dbpath.c_str(), opt_newid);
   if (!db)
     exit(1);
   cleanup _c (sqlite3_close_v2, db);
-  cout << getconfig<i64>(db, "self") << '\n';
+  if (!opt_newid)
+    cout << getconfig<i64>(db, "self") << '\n';
+  else {
+    i64 oldid = getconfig<i64>(db, "self");
+    if (opt_newid_value <= 0)
+      opt_newid_value = create_random_id ();
+    if (opt_newid_value <= 0)
+      exit(1);
+    cout << "changing id from " << oldid << " to " << opt_newid_value << '\n';
+    setconfig (db, "self", opt_newid_value);
+  }
 }
 
 static void
@@ -355,6 +368,7 @@ enum opttag {
   OPT_HELP,
   OPT_NONEW,
   OPT_SELF,
+  OPT_NEWID,
   OPT_INIT
 };
 
@@ -368,6 +382,7 @@ static const struct option muchsync_options[] = {
   { "nonew", no_argument, nullptr, OPT_NONEW },
   { "init", required_argument, nullptr, OPT_INIT },
   { "self", no_argument, nullptr, OPT_SELF },
+  { "newid", optional_argument, nullptr, OPT_NEWID },
   { "config", required_argument, nullptr, 'C' },
   { "help", no_argument, nullptr, OPT_HELP },
   { nullptr, 0, nullptr, 0 }
@@ -423,6 +438,9 @@ main(int argc, char **argv)
     case OPT_SELF:
       opt_self = true;
       break;
+    case OPT_NEWID:
+      opt_newid = true;
+      break;
     case OPT_INIT:
       opt_init = true;
       opt_init_dest = optarg;
@@ -433,8 +451,19 @@ main(int argc, char **argv)
       usage();
     }
 
-  if (opt_self)
-    print_self();
+  if (opt_self || opt_newid) {
+    if ((opt_self && opt_newid) || optind != argc
+	|| opt_init || opt_noup || opt_upbg)
+      usage();
+    if (opt_newid && optarg) {
+      opt_newid_value = std::stoll(optarg, nullptr, 10);
+      if (opt_newid_value <= 0) {
+	cerr << "invalid id\n";
+	exit (1);
+      }
+    }
+    id_request();
+  }
   else if (opt_server) {
     if (opt_init || opt_noup || opt_upbg || optind != argc)
       usage();

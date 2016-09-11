@@ -197,6 +197,15 @@ privacy reasons, you will need to run the following on each replica:
     is running, particularly if network file systems allow a replica
     to be accessed from multiple machines.
 
+\--newid
+:   Muchsync requires every replica to have a unique 64-bit identifier.
+    If you ever copy a notmuch database to another machine, including
+    the muchsync state, bad things will happen if both copies use
+    muchsync, as they will both have the same identifier.  Hence,
+    after making such copy and before running muchsync to synchronize
+    mail, run `muchsync --newid` to change the identifier of one of
+    the copies.
+
 \--version
 :   Report on the muchsync version number
 

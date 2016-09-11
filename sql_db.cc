@@ -65,16 +65,23 @@ CREATE TABLE xapian_nlinks (
   PRIMARY KEY (hash_id, dir_docid));
 )";
 
+i64
+create_random_id()
+{
+  i64 id = 0;
+  if (RAND_pseudo_bytes ((unsigned char *) &id, sizeof (id)) == -1 || id == 0) {
+    cerr << "RAND_pseudo_bytes failed\n";
+    return -1;
+  }
+  id &= ~(i64 (1) << 63);
+}
+
 static sqlite3 *
 dbcreate (const char *path)
 {
-  i64 self = 0;
-  if (RAND_pseudo_bytes ((unsigned char *) &self, sizeof (self)) == -1
-      || self == 0) {
-    cerr << "RAND_pseudo_bytes failed\n";
+  i64 self = create_random_id();
+  if (self <= 0)
     return nullptr;
-  }
-  self &= ~(i64 (1) << 63);
 
   sqlite3 *db = nullptr;
   int err = sqlite3_open_v2 (path, &db,

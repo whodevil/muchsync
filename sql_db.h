@@ -139,4 +139,7 @@ string trashname (const string &maildir, const string &hash);
 
 string permissive_percent_encode (const string &raw);
 
+i64 create_random_id ();
+
+
 #endif /* !_SQL_DB_H */

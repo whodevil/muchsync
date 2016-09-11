@@ -2,6 +2,8 @@
 
 Added help command to --server mode.
 
+Added --newid command-line option.
+
 * Changes in release 2
 
 Work around missing openat because of reports it is missing on some
