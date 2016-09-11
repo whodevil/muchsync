@@ -74,6 +74,7 @@ create_random_id()
     return -1;
   }
   id &= ~(i64 (1) << 63);
+  return id;
 }
 
 static sqlite3 *

@@ -150,13 +150,13 @@ id_request()
   if (!opt_newid)
     cout << getconfig<i64>(db, "self") << '\n';
   else {
+    sqlexec (db, "BEGIN;");
     i64 oldid = getconfig<i64>(db, "self");
-    if (opt_newid_value <= 0)
-      opt_newid_value = create_random_id ();
-    if (opt_newid_value <= 0)
-      exit(1);
-    cout << "changing id from " << oldid << " to " << opt_newid_value << '\n';
+    sqlexec (db, "INSERT OR IGNORE INTO sync_vector (replica, version)"
+	     " VALUES (%lld, 1);", opt_newid_value);
     setconfig (db, "self", opt_newid_value);
+    cout << "changing id from " << oldid << " to " << opt_newid_value << '\n';
+    sqlexec (db, "COMMIT;");
   }
 }
 
@@ -440,6 +440,15 @@ main(int argc, char **argv)
       break;
     case OPT_NEWID:
       opt_newid = true;
+      if (optarg) {
+	opt_newid_value = std::stoll(optarg, nullptr, 10);
+	if (opt_newid_value <= 0) {
+	  cerr << "invalid id " << optarg << '\n';
+	  usage();
+	}
+      }
+      else
+	opt_newid_value = create_random_id();
       break;
     case OPT_INIT:
       opt_init = true;
@@ -455,13 +464,6 @@ main(int argc, char **argv)
     if ((opt_self && opt_newid) || optind != argc
 	|| opt_init || opt_noup || opt_upbg)
       usage();
-    if (opt_newid && optarg) {
-      opt_newid_value = std::stoll(optarg, nullptr, 10);
-      if (opt_newid_value <= 0) {
-	cerr << "invalid id\n";
-	exit (1);
-      }
-    }
     id_request();
   }
   else if (opt_server) {
