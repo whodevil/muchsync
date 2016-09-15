@@ -911,7 +911,7 @@ muchsync_client (sqlite3 *db, notmuch_db &nm,
     else if (now - last_commit >= commit_interval) {
       nm.close();
       sqlexec(db, "COMMIT; BEGIN;");
-      last_commit = now;
+      last_commit = time(nullptr);
     }
   };
 
