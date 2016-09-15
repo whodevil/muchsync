@@ -4,6 +4,10 @@ Added help command to --server mode.
 
 Added --newid command-line option.
 
+Limit receive buffering to 128 MiB in response to complaints from
+users with more email than swap space who cannot initialize replicas.
+128 MiB should still be enough to get full network utilization.
+
 * Changes in release 2
 
 Work around missing openat because of reports it is missing on some
