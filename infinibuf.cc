@@ -3,7 +3,9 @@
 #include <cstring>
 #include <iostream>
 #include <streambuf>
+#include <fcntl.h>
 #include <unistd.h>
+#include <poll.h>
 #include <sys/socket.h>
 
 #include "infinibuf.h"
@@ -27,6 +29,7 @@ infinibuf::gbump(int n)
     delete[] data_.front();
     data_.pop_front();
     gpos_ = startpos_;
+    notfull();
   }
 }
 
@@ -50,7 +53,26 @@ infinibuf::pbump(int n)
     notempty();
 }
 
-bool
+static int
+set_nonblock(int fd)
+{
+  int n;
+  if ((n = fcntl (fd, F_GETFL)) == -1
+      || fcntl (fd, F_SETFL, n | O_NONBLOCK) == -1)
+    return -1;
+  return 0;
+}
+
+static void
+waitfd(int fd, int events)
+{
+  struct pollfd pfd;
+  pfd.fd = fd;
+  pfd.events = events;
+  poll(&pfd, 1, -1);
+}
+
+int
 infinibuf::output(int fd)
 {
   unique_lock<infinibuf> lk (*this);
@@ -64,10 +86,10 @@ infinibuf::output(int fd)
     else if (!nmax && iseof) {
       assert (empty());
       shutdown(fd, SHUT_WR);
-      return false;
+      return 0;
     }
     if (!nmax)
-      return true;
+      return 1;
 
     lk.unlock();
     ssize_t n = write(fd, p, nmax);
@@ -77,13 +99,13 @@ infinibuf::output(int fd)
       gbump(n);
     else {
       if (errno == EAGAIN)
-	return true;
+	return -1;
       err(errno);
     }
   }
 }
 
-bool
+int
 infinibuf::input(int fd)
 {
   unique_lock<infinibuf> lk (*this);
@@ -98,7 +120,7 @@ infinibuf::input(int fd)
 
   if (n < 0) {
     if (errno == EAGAIN)
-      return true;
+      return -1;
     err(errno);
     throw runtime_error (string("infinibuf::input: ") + strerror(errno));
   }
@@ -117,15 +139,30 @@ struct fd_closer {
 };
 
 void
-infinibuf::output_loop(shared_ptr<infinibuf> ib, int fd)
+infinibuf::output_loop(shared_ptr<infinibuf> ib, int fd,
+		       std::function<void(bool)> oblocked)
 {
   fd_closer _c(fd);
+  if (oblocked)
+    set_nonblock(fd);
   try {
-    while (ib->output(fd)) {
-      lock_guard<infinibuf> _lk (*ib);
-      ib->gwait();
+    for (;;) {
+      int res = ib->output(fd);
+      if (res > 0) {
+	lock_guard<infinibuf> _lk (*ib);
+	ib->gwait();
+      }
+      else if (res == 0)
+	return;
+      else { // EINTR
+	if (oblocked)
+	  oblocked(true);
+	waitfd(fd, POLLOUT);
+	if (oblocked)
+	  oblocked(false);
+      }
     }
-  } catch (runtime_error) {}
+  } catch (const runtime_error &) {}
 }
 
 void
@@ -133,9 +170,17 @@ infinibuf::input_loop(shared_ptr<infinibuf> ib, int fd)
 {
   fd_closer _c(fd);
   try {
-    while (ib->input(fd))
-      ;
-  } catch (runtime_error) {}
+    for (;;) {
+      int res = ib->input(fd);
+      if (res < 0)
+	waitfd(fd, POLLIN);
+      else if (res == 0)
+	return;
+      // Don't even bother checking flow control if less than 1MB allocated
+      if (ib->buffer_size() >= 100000)
+	ib->pwait();
+    }
+  } catch (const runtime_error &) {}
 }
 
 infinibuf_infd::~infinibuf_infd()
@@ -143,10 +188,29 @@ infinibuf_infd::~infinibuf_infd()
   close(fd_);
 }
 
+infinibuf_outfd::infinibuf_outfd (int fd, std::function<void(bool)> oblocked)
+  : infinibuf(0), fd_(fd), oblocked_(oblocked) {
+  if (oblocked_)
+    set_nonblock(fd_);
+}
+
 infinibuf_outfd::~infinibuf_outfd()
 {
   close(fd_);
 }
+
+void
+infinibuf_outfd::notempty()
+{
+  while (output(fd_) < 0) { // EINTR
+    if (oblocked_)
+      oblocked_(true);
+    waitfd(fd_, POLLOUT);
+    if (oblocked_)
+      oblocked_(false);
+  }
+}
+
 
 infinistreambuf::int_type
 infinistreambuf::underflow()
@@ -195,6 +259,8 @@ infinistreambuf::sputeof()
   lock_guard<infinibuf> _lk (*ib_);
   ib_->peof();
 }
+
+
 
 #if 0
 int

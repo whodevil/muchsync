@@ -36,10 +36,13 @@ protected:
    *  non-empty. */
   virtual void notempty() {}
 
+  /** Called when sufficient bytes are consumed to free some memory. */
+  virtual void notfull() {}
+
 public:
   explicit infinibuf(int sp = default_startpos_)
     : gpos_(sp), ppos_(sp), startpos_(sp) {
-    data_.push_back (new char[chunksize_]);
+    data_.push_back(new char[chunksize_]);
   }
   infinibuf(const infinibuf &) = delete;
   virtual ~infinibuf() = 0;
@@ -49,6 +52,7 @@ public:
 
   bool empty() { return data_.front() == data_.back() && gpos_ == ppos_; }
   bool eof() { return eof_; }
+  std::size_t buffer_size() { return data_.size() * chunksize_; }
   int err() { return errno_; }
   void err(int num) { if (!errno_) errno_ = num; peof(); }
 
@@ -68,13 +72,15 @@ public:
   char *epptr() { return pptr() + psize(); }
   void pbump(int n);
   void peof() { eof_ = true; if (empty()) notempty(); }
+  /** Called to sleep if the buffer is too full. */
+  virtual void pwait() {}
 
   // These functions are thread safe for some subtypes:
 
   /** By default `lock()` and `unlock()` do nothing, but threadsafe
    *  derived classes must override these functions. */
   virtual void lock() {}
-  /** See comment at unlock. */
+  /** See comment at lock. */
   virtual void unlock() {}
 
   /** \brief Drain the current contents of the buffer.
@@ -84,11 +90,11 @@ public:
    * will ensue.
    *
    * \param fd The file descriptor to write to.
-   * \return `false` at EOF if there is no point in ever calling
-   * `output` again.
+   * \return 0 at EOF if there is no point in ever calling `output`
+   * again, -1 after EAGAIN, and 1 after successful output.
    * \throws runtime_error if the `write` system call fails and
    * `errno` is not `EAGAIN`. */
-  bool output(int fd);
+  int output(int fd);
 
   /** Fill the buffer from a file descriptor.
    *
@@ -96,13 +102,14 @@ public:
    * the `infinibuf`.
    *
    * \param fd The file descriptor to read from.
-   * \return `false` at EOF if there is no point in ever calling
-   * `output` again.
+   * \return 0 at EOF if there is no point in ever calling
+   * `input` again, 1 after successful input, and -1 after EAGAIN.
    * \throws runtime_error if the `read` system call fails and
    * `errno` is not `EAGAIN`. */
-  bool input(int fd);
+  int input(int fd);
 
-  static void output_loop(std::shared_ptr<infinibuf> ib, int fd);
+  static void output_loop(std::shared_ptr<infinibuf> ib, int fd,
+			  std::function<void(bool)> oblocked = nullptr);
   static void input_loop(std::shared_ptr<infinibuf> ib, int fd);
 };
 
@@ -125,11 +132,13 @@ public:
  *  Closes the file descriptor upon destruction. */
 class infinibuf_outfd : public infinibuf {
   const int fd_;
+  std::function<void(bool)> oblocked_;
+  
 public:
-  explicit infinibuf_outfd (int fd)
-    : infinibuf(0), fd_(fd) {}
+  explicit infinibuf_outfd (int fd,
+			    std::function<void(bool)> oblocked = nullptr);
   ~infinibuf_outfd();
-  void notempty() override { output(fd_); }
+  void notempty() override;
 };
 
 /** \brief Thread-safe infinibuf.
@@ -141,16 +150,33 @@ public:
 class infinibuf_mt : public infinibuf {
   std::mutex m_;
   std::condition_variable cv_;
+  std::condition_variable flow_ctrl_cv_;
+  std::size_t max_buf_size_{0};
 public:
   explicit infinibuf_mt (int sp = default_startpos_) : infinibuf(sp) {}
   void lock() override { m_.lock(); }
   void unlock() override { m_.unlock(); }
   void notempty() override { cv_.notify_all(); }
+  void notfull() override { flow_ctrl_cv_.notify_all(); }
+  void set_max_buf_size(std::size_t val) {
+    std::lock_guard<infinibuf> _lk(*this);
+    if (!val || val > max_buf_size_)
+      notfull();
+    max_buf_size_ = val;
+  }
   void gwait() override {
     if (empty() && !eof()) {
       std::unique_lock<std::mutex> ul (m_, std::adopt_lock);
-      cv_.wait(ul);
+      if (empty() && !eof())
+	cv_.wait(ul);
       ul.release();
+    }
+  }
+  void pwait() override {
+    if (max_buf_size_ && buffer_size() > max_buf_size_) {
+      std::unique_lock<std::mutex> ul (m_, std::adopt_lock);
+      if (max_buf_size_ && buffer_size() > max_buf_size_)
+	flow_ctrl_cv_.wait(ul);
     }
   }
 };
@@ -193,8 +219,8 @@ public:
 class ofdstream : public std::ostream {
   infinistreambuf isb_;
 public:
-  ofdstream(int fd)
-    : std::ostream (nullptr), isb_(new infinibuf_outfd(fd)) {
+  ofdstream(int fd, std::function<void(bool)> oblocked = nullptr)
+    : std::ostream (nullptr), isb_(new infinibuf_outfd(fd, oblocked)) {
     init(&isb_);
   }
   ~ofdstream() {
@@ -213,13 +239,17 @@ public:
  * input thread could get stuck if no input and no EOF happens.
  */
 class ifdinfinistream : public std::istream {
-  infinistreambuf isb_ { new infinibuf_mt() };
+  std::shared_ptr<infinibuf_mt> ib_ { new infinibuf_mt() };
+  infinistreambuf isb_ { ib_ };
 public:
-  ifdinfinistream (int fd) : std::istream (nullptr) {
+  explicit ifdinfinistream (int fd, std::size_t size = 0)
+    : std::istream (nullptr) {
+    set_max_buf_size(size);
     std::thread t (infinibuf::input_loop, isb_.get_infinibuf(), fd);
     t.detach();
     init(&isb_);
   }
+  void set_max_buf_size(std::size_t size) { ib_->set_max_buf_size(size); }
   ~ifdinfinistream() {
     std::lock_guard<infinibuf> _lk (*isb_.get_infinibuf());
     // Sadly, there appears to be no portable way of waking up the
@@ -253,7 +283,7 @@ class ofdinfinistream : public std::ostream {
   std::thread t_;
 public:
   ofdinfinistream (int fd) {
-    std::thread t (infinibuf::output_loop, isb_.get_infinibuf(), fd);
+    std::thread t (infinibuf::output_loop, isb_.get_infinibuf(), fd, nullptr);
     t_ = std::move(t);
     rdbuf(&isb_);
   }

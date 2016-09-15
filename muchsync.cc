@@ -33,6 +33,9 @@ const char muchsync_tmpdir[] = MUCHSYNC_DEFDIR "/tmp";
 
 constexpr char shell[] = "/bin/sh";
 
+// Probably no win from buffering more than 128MB of input data from net
+constexpr size_t max_buf_size = 0x8000000;
+
 bool opt_fullscan;
 bool opt_noscan;
 bool opt_init;
@@ -163,9 +166,14 @@ id_request()
 static void
 server()
 {
-  ifdinfinistream ibin(0);
-  cleanup _fixbuf ([](streambuf *sb){ cin.rdbuf(sb); },
+  ifdinfinistream ibin(0, max_buf_size);
+  cleanup _fixbuf0 ([](streambuf *sb){ cin.rdbuf(sb); },
 		   cin.rdbuf(ibin.rdbuf()));
+  ofdstream ibout(1, [&ibin](bool blocked) {
+      ibin.set_max_buf_size(blocked ? 0 : max_buf_size);
+    });
+  cleanup _fixbuf1 ([](streambuf *sb){ cout.rdbuf(sb); },
+		   cout.rdbuf(ibout.rdbuf()));
   tag_stderr("[SERVER] ");
 
   unique_ptr<notmuch_db> nmp;
@@ -330,8 +338,10 @@ client(int ac, char **av)
   string cmd (os.str());
   int fds[2];
   cmd_iofds (fds, cmd);
-  ofdstream out (fds[1]);
-  ifdinfinistream in (fds[0]);
+  ifdinfinistream in (fds[0], max_buf_size);
+  ofdstream out (fds[1], [&in](bool blocked){
+      in.set_max_buf_size(blocked ? 0 : max_buf_size);
+    });
   in.tie (&out);
 
   if (opt_init) {
