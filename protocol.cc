@@ -483,7 +483,12 @@ msg_sync::tag_sync(const versvector &rvv, const tag_info &rti)
   cleanup c (sqlexec, db_, "ROLLBACK TO tag_sync;");
 
   notmuch_db::message_t msg = nm_.get_message (rti.message_id.c_str());
-  assert (tagdb.docid() == nm_.get_docid(msg));
+  if (tagdb.docid() != nm_.get_docid(msg)) {
+    cerr << "error: muchsync docid " << tagdb.docid()
+	 << " != xapian docid " << nm_.get_docid(msg)
+	 << " for message " << rti.message_id << '\n';
+    terminate();
+  }
 
   bool tags_conflict
     = lti.tag_stamp.second > find_default (0, rvv, lti.tag_stamp.first);
