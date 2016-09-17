@@ -141,7 +141,15 @@ privacy reasons, you will need to run the following on each replica:
     that files in a maildir are never edited.  -F disables certain
     optimizations so as to make muchsync at least check the timestamp
     on every file, which will detect modified files at the cost of a
-    longer startup time.
+    longer startup time.  If muchsync dies with the error "message
+    received does not match hash," you likely need to run it with the
+    -F option.
+
+    Note that if your software regularly modifies the contents of mail
+    files (e.g., because you are running offlineimap with "synclabels
+    = yes"), then you will need to use -F each time you run muchsync.
+    Specify it as a server option (after the server name) if the
+    editing happens server-side.
 
 \-r /path/to/muchsync
 :   Specifies the path to muchsync on the server.  Ordinarily, muchsync
