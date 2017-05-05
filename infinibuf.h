@@ -108,6 +108,16 @@ public:
    * `errno` is not `EAGAIN`. */
   int input(int fd);
 
+  /** Calls `output` over and over in a loop on an `infinibuf`.
+   *
+   * \param ib The `infinibuf` on which to call `output`.
+   *
+   * \param fd The file descriptor to which to write consumed data.
+   *
+   * \param oblocked If non-null is called with `true` whenever the
+   * output is blocked by flow control, and then called again with
+   * `false` when the output becomes unblocked.
+   */
   static void output_loop(std::shared_ptr<infinibuf> ib, int fd,
 			  std::function<void(bool)> oblocked = nullptr);
   static void input_loop(std::shared_ptr<infinibuf> ib, int fd);
@@ -167,7 +177,7 @@ public:
   void gwait() override {
     if (empty() && !eof()) {
       std::unique_lock<std::mutex> ul (m_, std::adopt_lock);
-      if (empty() && !eof())
+      while (empty() && !eof())
 	cv_.wait(ul);
       ul.release();
     }
@@ -237,6 +247,8 @@ public:
  * another thread.  Closes the file descriptor after receiving EOF.
  * Kill the input thread if any further input is received, but the
  * input thread could get stuck if no input and no EOF happens.
+ * Maximum buffer size defaults to infinity but can be adjusted with
+ * `ifdinfinistream::set_max_buf_size`.
  */
 class ifdinfinistream : public std::istream {
   std::shared_ptr<infinibuf_mt> ib_ { new infinibuf_mt() };
@@ -249,6 +261,10 @@ public:
     t.detach();
     init(&isb_);
   }
+  /** Sets maximum buffer size, above which it will stop reading from
+   * the file descriptor until more is consumed locally.
+   *
+   * A value of 0 means no maximum buffer size.  */
   void set_max_buf_size(std::size_t size) { ib_->set_max_buf_size(size); }
   ~ifdinfinistream() {
     std::lock_guard<infinibuf> _lk (*isb_.get_infinibuf());
@@ -271,6 +287,7 @@ public:
   }
 };
 
+#if 0
 /** \brief `ostream` from file descriptor with unbounded buffer.
  *
  * Buffers unbounded amounts of data which are drained to a file
@@ -287,7 +304,8 @@ public:
     t_ = std::move(t);
     rdbuf(&isb_);
   }
-  ~ofdinfinistream() {
+  // Doesn't work because std::ostream's virtual destructor is noexcept.
+  ~ofdinfinistream() noexcept(false) {
     isb_.sputeof();
     if (!std::uncaught_exception()) {
       t_.join();
@@ -298,5 +316,6 @@ public:
     }
   }
 };
+#endif
 
 #endif /* !_INFINIBUF_H_ */

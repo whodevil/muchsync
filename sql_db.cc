@@ -69,7 +69,7 @@ i64
 create_random_id()
 {
   i64 id = 0;
-  if (RAND_pseudo_bytes ((unsigned char *) &id, sizeof (id)) == -1 || id == 0) {
+  if (RAND_bytes ((unsigned char *) &id, sizeof (id)) == -1 || id == 0) {
     cerr << "RAND_pseudo_bytes failed\n";
     return -1;
   }

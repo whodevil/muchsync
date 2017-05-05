@@ -87,8 +87,8 @@ inline uint32_t
 randint()
 {
   uint32_t v;
-  if (RAND_pseudo_bytes ((unsigned char *) &v, sizeof (v)) == -1)
-    throw runtime_error ("RAND_pseudo_bytes failed");
+  if (RAND_bytes ((unsigned char *) &v, sizeof (v)) == -1)
+    throw runtime_error ("RAND_bytes failed");
   return v;
 }
 

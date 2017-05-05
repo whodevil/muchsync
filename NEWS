@@ -1,5 +1,7 @@
 * Changes in release 3
 
+Cleaned up a few compilation warnings.
+
 Added help command to --server mode.
 
 Added --newid command-line option.
