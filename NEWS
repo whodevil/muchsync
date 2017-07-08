@@ -1,3 +1,5 @@
+Updated for GCC 7 header changes (thanks Toke Høiland-Jørgensen).
+
 * Changes in release 3
 
 Cleaned up a few compilation warnings.

@@ -2,6 +2,7 @@
 #include <cassert>
 #include <cstring>
 #include <iostream>
+#include <functional>
 #include <streambuf>
 #include <fcntl.h>
 #include <unistd.h>
