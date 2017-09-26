@@ -10,7 +10,6 @@
 #include <errno.h>
 #include <string.h>
 
-#include <notmuch.h>
 #include <sqlite3.h>
 
 #include "sqlstmt.h"
