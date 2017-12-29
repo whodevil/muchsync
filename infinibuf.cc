@@ -178,6 +178,7 @@ infinibuf::input_loop(shared_ptr<infinibuf> ib, int fd)
       else if (res == 0)
 	return;
       // Don't even bother checking flow control if less than 1MB allocated
+      lock_guard<infinibuf> lk (*ib);
       if (ib->buffer_size() >= 100000)
 	ib->pwait();
     }

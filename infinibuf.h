@@ -184,9 +184,11 @@ public:
   }
   void pwait() override {
     if (max_buf_size_ && buffer_size() > max_buf_size_) {
-      std::unique_lock<std::mutex> ul (m_, std::adopt_lock);
-      if (max_buf_size_ && buffer_size() > max_buf_size_)
+      if (max_buf_size_ && buffer_size() > max_buf_size_) {
+	std::unique_lock<std::mutex> ul (m_, std::adopt_lock);
 	flow_ctrl_cv_.wait(ul);
+	ul.release();
+      }
     }
   }
 };

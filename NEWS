@@ -1,3 +1,9 @@
+
+* Changes in release 5
+
+Fixed a race condition that could cause a core dump on fast networks
+when flow-control logic kicked in.
+
 * Changes in release 4
 
 Updated for GCC 7 header changes (thanks Toke Høiland-Jørgensen).
