@@ -141,7 +141,7 @@ id_request()
   unique_ptr<notmuch_db> nmp;
   try {
     nmp.reset(new notmuch_db (opt_notmuch_config));
-  } catch (whattocatch_t e) { cerr << e.what() << '\n'; exit (1); }
+  } catch (whattocatch_t &e) { cerr << e.what() << '\n'; exit (1); }
   notmuch_db &nm = *nmp;
 
   string dbpath = nm.maildir + muchsync_dbpath;
@@ -179,7 +179,7 @@ server()
   unique_ptr<notmuch_db> nmp;
   try {
     nmp.reset(new notmuch_db (opt_notmuch_config));
-  } catch (whattocatch_t e) { cerr << e.what() << '\n'; exit (1); }
+  } catch (whattocatch_t &e) { cerr << e.what() << '\n'; exit (1); }
   notmuch_db &nm = *nmp;
 
   string dbpath = nm.maildir + muchsync_dbpath;
@@ -311,7 +311,7 @@ client(int ac, char **av)
   else {
     try {
       nmp.reset(new notmuch_db (opt_notmuch_config));
-    } catch (whattocatch_t e) { cerr << e.what() << '\n'; exit (1); }
+    } catch (whattocatch_t &e) { cerr << e.what() << '\n'; exit (1); }
   }
 
   if (ac == 0) {
@@ -348,7 +348,7 @@ client(int ac, char **av)
     create_config(in, out, opt_init_dest);
     try {
       nmp.reset(new notmuch_db (opt_notmuch_config, true));
-    } catch (whattocatch_t e) { cerr << e.what() << '\n'; exit (1); }
+    } catch (whattocatch_t &e) { cerr << e.what() << '\n'; exit (1); }
   }
   if (!muchsync_init(nmp->maildir, true))
     exit(1);

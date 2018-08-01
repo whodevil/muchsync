@@ -788,7 +788,7 @@ muchsync_server(sqlite3 *db, notmuch_db &nm)
 	    cout << "250 ok\n";
 	  }
 	}
-	catch (exception e) {
+	catch (exception &e) {
 	  cerr << e.what() << '\n';
 	  cout << "550 " << e.what() << '\n';
 	}

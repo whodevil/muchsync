@@ -101,7 +101,7 @@ dbcreate (const char *path)
     sqlexec (db, "INSERT INTO sync_vector (replica, version)"
 	     " VALUES (%lld, 1);", self);
     sqlexec (db, "COMMIT;");
-  } catch (sqlerr_t exc) {
+  } catch (sqlerr_t &exc) {
     sqlite3_close_v2 (db);
     cerr << exc.what () << '\n';
     return nullptr;
@@ -133,7 +133,7 @@ dbopen (const char *path, bool exclusive)
     }
     getconfig<i64> (db, "self");
   }
-  catch (sqldone_t) {
+  catch (sqldone_t &) {
     cerr << path << ": invalid configuration\n";
     sqlite3_close_v2 (db);
     return nullptr;

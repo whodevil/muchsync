@@ -656,7 +656,7 @@ sync_local_data (sqlite3 *sqldb, const string &maildir)
 
     xapian_scan (sqldb, ws, maildir);
   }
-  catch (...) {
+  catch (exception &e) {
     sqlexec (sqldb, "ROLLBACK TO localsync;");
     throw;
   }
