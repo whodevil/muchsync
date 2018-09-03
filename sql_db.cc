@@ -1,4 +1,5 @@
 
+#include <cstring>
 #include <functional>
 #include <iomanip>
 #include <iostream>
@@ -443,6 +444,8 @@ hash_lookup::content()
     if (content_.is_open())
       return content_.rdbuf();
   }
+  if (opt_verbose > 1 && nlinks() > 0)
+    cerr << link_path(nlinks()-1) << ": " << strerror(errno) << "\n";
   return nullptr;
 }
 

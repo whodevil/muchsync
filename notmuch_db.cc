@@ -60,7 +60,11 @@ notmuch_db::add_message(const string &path, const tags_t *newtags,
 {
   notmuch_status_t err;
   notmuch_message_t *message;
+#if LIBNOTMUCH_CHECK_VERSION(5,1,0)
+  err = notmuch_database_index_file(notmuch(), path.c_str(), nullptr, &message);
+#else // libnotmuch < 5.1.0
   err = notmuch_database_add_message(notmuch(), path.c_str(), &message);
+#endif // libnotmuch < 5.1.0
   if (err != NOTMUCH_STATUS_DUPLICATE_MESSAGE_ID) {
     nmtry("notmuch_database_add_message", err);
     set_tags(message, newtags ? *newtags : new_tags);
