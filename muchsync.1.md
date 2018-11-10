@@ -262,7 +262,7 @@ following in the file ``.notmuch/hooks/post-new`` under your mail
 directory:
 
     #!/bin/sh
-    notmuch --nonew --upbg myserver
+    muchsync --nonew --upbg myserver
 
 # FILES
 
