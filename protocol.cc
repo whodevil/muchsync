@@ -880,7 +880,7 @@ void
 muchsync_client (sqlite3 *db, notmuch_db &nm,
 		 istream &in, ostream &out)
 {
-  constexpr time_t commit_interval = 10;
+  constexpr time_t commit_interval = 90;
   /* Any work done here gets overlapped with server */
   sync_local_data (db, nm.maildir);
   versvector localvv {get_sync_vector (db)}, remotevv;
