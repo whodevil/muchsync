@@ -738,7 +738,7 @@ muchsync_server(sqlite3 *db, notmuch_db &nm)
       if (send_content(hashdb, tagdb, hash, "220-", cout))
 	cout << "220 " << hash << '\n';
       else if (hashdb.ok())
-	cout << "420 cannot open file\n";
+	cout << "420 cannot open file with hash " << hash << "\n";
       else
 	cout << "520 unknown hash\n";
     }
