@@ -18,7 +18,7 @@ out/muchsync.html: ../muchsync.1.md $(DEPS)
 
 out/logo.png: logo.svg
 	@mkdir -p out
-	inkscape -e $@ $<
+	inkscape -o $@ $<
 
 out/muchsync.1: ../muchsync.1.md
 	@mkdir -p out
