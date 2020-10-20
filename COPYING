@@ -10,3 +10,7 @@ at the following URLs:
 If the Free Software Foundation publishes a higher-numbered GPL
 license, you may at your option distribute this software under the
 terms of that license as well.
+
+Furthermore, the copyright holder grants you the right to classify the
+collection of crypgtographic hash functions in OpenSSL's libcrypto as
+a "system library" and a "major component of the operating system."

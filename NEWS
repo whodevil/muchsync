@@ -1,3 +1,10 @@
+* Changes in release 6
+
+Clarified that it's okay to link against OpenSSL libcrypto.
+
+Update to format man page with recent versions of pandoc.
+
+Improve some error handing and error messages.
 
 * Changes in release 5
 
