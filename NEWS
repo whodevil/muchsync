@@ -1,3 +1,8 @@
+
+Fixed a performance bug in which SQL queries used bitwise & instead of
+logical AND, which caused a linear scan of a database table when files
+were moved or deleted.
+
 * Changes in release 6
 
 Clarified that it's okay to link against OpenSSL libcrypto.
