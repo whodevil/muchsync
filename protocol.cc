@@ -146,11 +146,11 @@ msg_sync::msg_sync (notmuch_db &nm, sqlite3 *db)
 	      " (dir_docid, name, docid, mtime, inode, hash_id)"
 	      " VALUES (?, ?, ?, ?, ?, ?);"),
     del_file_(db, "DELETE FROM xapian_files"
-	      " WHERE (dir_docid = ?) & (name = ?);"),
+	      " WHERE (dir_docid = ?) AND (name = ?);"),
     set_link_count_(db_, "INSERT OR REPLACE INTO xapian_nlinks"
 		    " (hash_id, dir_docid, link_count) VALUES (?, ?, ?);"),
     delete_link_count_(db_, "DELETE FROM xapian_nlinks"
-		       " WHERE (hash_id = ?) & (dir_docid = ?);"),
+		       " WHERE (hash_id = ?) AND (dir_docid = ?);"),
     clear_tags_(db_, "DELETE FROM tags WHERE docid = ?;"),
     add_tag_(db_, "INSERT OR IGNORE INTO tags (docid, tag) VALUES (?, ?);"),
     update_message_id_stamp_(db_, "UPDATE message_ids SET"
@@ -593,7 +593,7 @@ send_links (sqlite3 *sqldb, const string &prefix, ostream &out)
 SELECT h.hash_id, hash, size, message_id, h.replica, h.version,
        dir_docid, link_count
 FROM (peer_vector p JOIN maildir_hashes h
-      ON ((p.replica = h.replica) & (p.known_version < h.version)))
+      ON ((p.replica = h.replica) AND (p.known_version < h.version)))
 LEFT OUTER JOIN xapian_nlinks USING (hash_id);)");
   
   i64 count = 0;
@@ -628,7 +628,7 @@ send_tags (sqlite3 *sqldb, const string &prefix, ostream &out)
   sqlstmt_t changed (sqldb, R"(
 SELECT m.docid, m.message_id, m.replica, m.version, tags.tag
 FROM (peer_vector p JOIN message_ids m
-      ON ((p.replica = m.replica) & (p.known_version < m.version)))
+      ON ((p.replica = m.replica) AND (p.known_version < m.version)))
       LEFT OUTER JOIN tags USING (docid);)");
 
   tag_info ti;
