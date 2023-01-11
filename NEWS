@@ -1,14 +1,14 @@
-* Changes in release 6
+* Changes in release 7
+
+Fixed a performance bug in which SQL queries used bitwise & instead of
+logical AND, which caused a linear scan of a database table when files
+were moved or deleted.
 
 Clarified that it's okay to link against OpenSSL libcrypto.
 
 Update to format man page with recent versions of pandoc.
 
 Improve some error handing and error messages.
-
-Fixed a performance bug in which SQL queries used bitwise & instead of
-logical AND, which caused a linear scan of a database table when files
-were moved or deleted.
 
 * Changes in release 6
 
