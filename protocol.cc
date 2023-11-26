@@ -789,8 +789,10 @@ muchsync_server(sqlite3 *db, notmuch_db &nm)
 	  }
 	}
 	catch (exception &e) {
-	  cerr << e.what() << '\n';
-	  cout << "550 " << e.what() << '\n';
+	  string msg (e.what());
+	  msg += " [id:" + hi.message_id + "]\n";
+	  cerr << msg;
+	  cout << "550 " << msg;
 	}
 	unlink(path.c_str());
       }
