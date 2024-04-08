@@ -14,8 +14,12 @@ Muchsync is a mail synchronizer for notmuch.  The project homepage is
     ./configure
     make
 
-[Note:  you need pandoc to build the man page, otherwise `autogen.sh`
+[Note 1:  you need pandoc to build the man page, otherwise `autogen.sh`
 will fetch it from the web.]
+
+[Note 2:  configure does not check for notmuch.h, which will only exist
+if you have notmuch installed, or a package such as notmuch-runtime
+offered by some OSs.]
 
 # Using
 
