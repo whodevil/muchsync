@@ -546,6 +546,10 @@ xapian_scan_filenames (sqlite3 *db, const string &maildir,
     if (!to_add.empty()) {
       _close.release();
       DIR *d = fdopendir(dfd);
+      if (!d) {
+	cerr << dirpath << ": " << strerror (errno) << '\n';
+	continue;
+      }
       cleanup _closedir (closedir, d);
       struct dirent *e;
       auto notfound = to_add.end();
