@@ -45,6 +45,13 @@ conf_to_bool(string s)
   return true;
 }
 
+static char*
+str_to_char_star(string s) {
+  const auto ret = new char[s.length() + 1];
+  strcpy(ret, s.c_str());
+  return ret;
+}
+
 notmuch_db::message_t
 notmuch_db::get_message(const char *msgid)
 {
@@ -113,7 +120,7 @@ notmuch_db::default_notmuch_config()
 string
 notmuch_db::get_config(const char *config, int *err)
 {
-  const char *av[] { "notmuch", "config", "get", config, nullptr };
+  const char *av[] { notmuch_path, "config", "get", config, nullptr };
   return run_notmuch(av, nullptr, err);
 }
 
@@ -122,7 +129,7 @@ notmuch_db::set_config(const char *config, ...)
 {
   va_list ap;
   va_start(ap, config);
-  vector<const char *> av { "notmuch", "config", "set", config };
+  vector<const char *> av { notmuch_path, "config", "set", config };
   const char *a;
   do {
     a = va_arg(ap, const char *);
@@ -131,8 +138,9 @@ notmuch_db::set_config(const char *config, ...)
   run_notmuch(av.data(), "[notmuch] ");
 }
 
-notmuch_db::notmuch_db(string config, bool create)
+notmuch_db::notmuch_db(string config, string path, bool create)
   : notmuch_config (config),
+    notmuch_path (str_to_char_star(path)),
     maildir (chomp(get_config("database.path"))),
     new_tags (lines(get_config("new.tags"))),
     and_tags (make_and_tags()),
@@ -202,8 +210,8 @@ notmuch_db::run_notmuch(const char *const *av, const char *errprefix,
       fcntl(err, F_SETFD, 1);
       ::open("/dev/null", O_WRONLY);
     }
-    
-    execvp("notmuch", const_cast<char *const*> (av));
+
+    execvp(notmuch_path, const_cast<char *const*> (av));
 
     if (err != -1)
       dup2(err, 2);

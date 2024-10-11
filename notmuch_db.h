@@ -36,6 +36,7 @@ public:
   using message_t = unique_obj<notmuch_message_t, notmuch_message_destroy>;
 
   const string notmuch_config;
+  const char* notmuch_path;
   const string maildir;
   const tags_t new_tags;
   const tags_t and_tags;
@@ -57,7 +58,7 @@ public:
 private:
   tags_t make_and_tags();
 public:
-  notmuch_db(string config, bool create = false);
+  notmuch_db(string config, string notmuch_path, bool create = false);
   notmuch_db(const notmuch_db &) = delete;
   ~notmuch_db();
 

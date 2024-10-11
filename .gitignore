@@ -5,11 +5,13 @@
 /TAGS
 /aclocal.m4
 /autom4te.cache
+/build
 /compile
 /config.log
 /config.status
 /configure
 /depcomp
+/.idea
 /install-sh
 /missing
 /muchsync

@@ -49,6 +49,7 @@ int opt_verbose;
 int opt_upbg_fd = -1;
 string opt_ssh = "ssh -CTaxq";
 string opt_remote_muchsync_path = "muchsync";
+string opt_notmuch_path = "notmuch";
 string opt_notmuch_config;
 string opt_init_dest;
 
@@ -122,7 +123,8 @@ Additional options:\n\
    -C file       Specify path to notmuch config file\n\
    -F            Disable optimizations and do full maildir scan\n\
    -v            Increase verbosity\n\
-   -r path       Specify path to notmuch executable on server\n\
+   -r path       Specify path to muchsync executable on server\n\
+   -n path       Specify path to notmuch executable\n\
    -s ssh-cmd    Specify ssh command and arguments\n\
    --config file Specify path to notmuch config file (same as -C)\n\
    --nonew       Do not run notmuch new first\n\
@@ -140,7 +142,7 @@ id_request()
 {
   unique_ptr<notmuch_db> nmp;
   try {
-    nmp.reset(new notmuch_db (opt_notmuch_config));
+    nmp.reset(new notmuch_db (opt_notmuch_config, opt_notmuch_path));
   } catch (whattocatch_t &e) { cerr << e.what() << '\n'; exit (1); }
   notmuch_db &nm = *nmp;
 
@@ -178,7 +180,7 @@ server()
 
   unique_ptr<notmuch_db> nmp;
   try {
-    nmp.reset(new notmuch_db (opt_notmuch_config));
+    nmp.reset(new notmuch_db (opt_notmuch_config, opt_notmuch_path));
   } catch (whattocatch_t &e) { cerr << e.what() << '\n'; exit (1); }
   notmuch_db &nm = *nmp;
 
@@ -284,7 +286,7 @@ create_config(istream &in, ostream &out, string &maildir)
     maildir = p + ("/" + maildir);
   }
 
-  notmuch_db nm (opt_notmuch_config);
+  notmuch_db nm (opt_notmuch_config, opt_notmuch_path);
   nm.set_config ("database.path", maildir.c_str(), nullptr);
 }
 
@@ -310,7 +312,7 @@ client(int ac, char **av)
   }
   else {
     try {
-      nmp.reset(new notmuch_db (opt_notmuch_config));
+      nmp.reset(new notmuch_db (opt_notmuch_config, opt_notmuch_path));
     } catch (whattocatch_t &e) { cerr << e.what() << '\n'; exit (1); }
   }
 
@@ -347,7 +349,7 @@ client(int ac, char **av)
   if (opt_init) {
     create_config(in, out, opt_init_dest);
     try {
-      nmp.reset(new notmuch_db (opt_notmuch_config, true));
+      nmp.reset(new notmuch_db (opt_notmuch_config, opt_notmuch_path, true));
     } catch (whattocatch_t &e) { cerr << e.what() << '\n'; exit (1); }
   }
   if (!muchsync_init(nmp->maildir, true))
@@ -420,6 +422,9 @@ main(int argc, char **argv)
       break;
     case 'r':
       opt_remote_muchsync_path = optarg;
+      break;
+    case 'n':
+      opt_notmuch_path = optarg;
       break;
     case 's':
       opt_ssh = optarg;
